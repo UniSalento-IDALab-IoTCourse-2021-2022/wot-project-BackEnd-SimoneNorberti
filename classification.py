@@ -1,13 +1,5 @@
-# TODO
-#           isolation forest
-#           or Supervised Binary Classification:
-#                                       Logistic Regression
-#                                       k-Nearest Neighbors
-#                                       Decision Trees
-#                                       Support Vector Machine
-#                                       Naive Bayes
-#
-# How often retrain the iForest?
+
+# How often retrain the classificators?
 
 import numpy as np
 import pandas as pd
@@ -18,6 +10,8 @@ from sklearn.svm import SVC
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.tree import DecisionTreeClassifier
 
 # IMPORT DATA FROM CSV FILE
 file = 'data.csv'
@@ -48,6 +42,8 @@ print('y_train.shape: {}    y_test.shape: {}'.format(y_train.shape, y_test.shape
 SVM_flag = True  # Support Vector Machine
 LR_flag = True  # Logistic Regression
 KNN_flag = True  # K-Nearest Neighbor
+GaussinNB_flag = True  # Gaussian Naive Bayes
+DecisionTree_flag = True
 test_flag = False  # True if u want evaluation stuff
 
 
@@ -93,8 +89,72 @@ if KNN_flag:
 
     model_KNN = KNeighborsClassifier(n_neighbors=13)
     k_fold_accuracy(n_splits=10, Xset=X, yset=y, model_to_evaluate=model_KNN)  # K-Fold cross-validation
-    training_prediction(model_KNN, X_train, y_train)   # Training + Prediction
+    training_prediction(model_KNN, X_train, y_train)  # Training + Prediction
 
+if GaussinNB_flag:
+    print("\nGaussianNB INITIALIZATION...")
+
+    model_GNB = GaussianNB()
+    k_fold_accuracy(n_splits=10, Xset=X, yset=y, model_to_evaluate=model_GNB)  # K-Fold cross-validation
+    training_prediction(model_GNB, X_train, y_train)  # Training + Prediction
+
+if DecisionTree_flag:
+    print("\nDecisionTree INITIALIZATION...")
+
+    model_DTC = DecisionTreeClassifier()
+    k_fold_accuracy(n_splits=10, Xset=X, yset=y, model_to_evaluate=model_DTC)  # K-Fold cross-validation
+    training_prediction(model_DTC, X_train, y_train)  # Training + Prediction
+
+'''
+ENSEMBLE TRY
+'''
+
+pred = []
+
+pred.append(model_SVC.predict(X_test))
+pred.append(model_LR.predict(X_test))
+pred.append(model_KNN.predict(X_test))
+pred.append(model_GNB.predict(X_test))
+pred.append(model_DTC.predict(X_test))
+print("SVC={} \nLR={} \nKNN={} \nGNB={} \nDTC={}".format(pred[0], pred[1], pred[2], pred[3], pred[4]))
+
+'''
+MAJORITY VOTING
+'''
+m = None  # winner
+len_pred = len(pred[0])
+n_classifier = 5
+print(len_pred)
+final = []
+
+for j in range(len_pred):
+    score = 0
+    for i in [0, 1, 2, 3, 4]:  # range(n_classifier)
+        print("i,j = {},{}".format(i, j))
+        if i == 0:
+            m = pred[i][j]
+            print('m = ', m)
+            score = 1
+        elif pred[i][j] == m:
+            score += 1
+        else:
+            if score == 0:
+                m = pred[i][j]
+                continue
+            score -= 1
+    final.append(m)
+    print(final[j])
+
+print("Ensamble Accuracy:", accuracy_score(y_test, final))
+# TODO complete the esamble learning
+"""
+Initialize an element m and a counter i with i = 0
+For each element x of the input sequence:
+    If i = 0, then assign m = x and i = 1
+    else if m = x, then assign i = i + 1
+    else assign i = i − 1
+Return m
+"""
 
 """
 # after first print... in SVM
@@ -109,8 +169,6 @@ if KNN_flag:
                     print('C={} gamma={}'.format(c, gamma))
                     print('Accuracy: %.3f (%.3f)' % (np.mean(scores), np.std(scores)))  # report performance
 """
-
-
 
 """
 # Find best parameters---------------------------------------------------------
