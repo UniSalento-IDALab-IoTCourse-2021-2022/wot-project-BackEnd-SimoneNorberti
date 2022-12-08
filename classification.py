@@ -88,26 +88,19 @@ if SVM_flag:
                     print('C={} gamma={}'.format(c, gamma))
                     print('Accuracy: %.3f (%.3f)' % (np.mean(scores), np.std(scores)))  # report performance
 
-    # ------------------------------------------------------------------------------
-
     model_SVC = SVC(kernel='rbf', C=626, gamma=0.002)  # C=626 gamma=0.002
-    # K-Fold cross-validation
-    k_fold_accuracy(n_splits=10, Xset=X, yset=y, model_to_evaluate=model_SVC)
-    # Training + Prediction
-    training_prediction(model_SVC)
+    k_fold_accuracy(n_splits=10, Xset=X, yset=y, model_to_evaluate=model_SVC)   # K-Fold cross-validation
+    training_prediction(model_SVC)  # Training + Prediction
 
 """""""""""""""""""""
 "LOGISTIC REGRESSION"
 """""""""""""""""""""
 if LR_flag:
     print("\nLR INITIALIZATION...")
+
     model_LR = LogisticRegression()
-    # K-Fold cross-validation
-    k_fold_accuracy(n_splits=10, Xset=X, yset=y, model_to_evaluate=model_LR)
-    # Training + Prediction
-    training_prediction(model_LR)
-
-
+    k_fold_accuracy(n_splits=10, Xset=X, yset=y, model_to_evaluate=model_LR)    # K-Fold cross-validation
+    training_prediction(model_LR)   # Training + Prediction
 
 
 
