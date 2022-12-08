@@ -2,7 +2,7 @@ import sys
 import pymongo as pymongo
 import datetime
 # TODO inserire anche timestamp
-
+# TODO il giorno dell'esame ricordarsi che serve un IP autorizzato
 """
 collection: paziente
     codice_fiscale: Primary
