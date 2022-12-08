@@ -17,6 +17,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV, KFold, cross
 from sklearn.svm import SVC
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
 
 # IMPORT DATA FROM CSV FILE
 file = 'data.csv'
@@ -46,6 +47,7 @@ print('y_train.shape: {}    y_test.shape: {}'.format(y_train.shape, y_test.shape
 
 SVM_flag = True  # Support Vector Machine
 LR_flag = True  # Logistic Regression
+KNN_flag = True  # K-Nearest Neighbor
 test_flag = False  # True if u want evaluation stuff
 
 
@@ -54,10 +56,11 @@ test_flag = False  # True if u want evaluation stuff
 def k_fold_accuracy(n_splits=10, Xset=None, yset=None, model_to_evaluate=None):
     cv = KFold(n_splits=n_splits, random_state=1, shuffle=True)  # prepare the cross-validation procedure
     scores = cross_val_score(model_to_evaluate, Xset, yset, scoring='accuracy', cv=cv, n_jobs=-1)  # evaluate model
-    print('K-Fold Accuracy: %.3f (%.3f)   (k=10)' % (np.mean(scores), np.std(scores)))  # report performance
+    print('K-Fold Accuracy: %.3f (%.3f)   (k=10)' % (np.mean(scores).__float__(), np.std(scores).__float__()))  #
+    # report performance
 
 
-def training_prediction(model=None):
+def training_prediction(model=None, X_train=None, y_train=None):
     model.fit(X_train, y_train)  # Training
     y_predicted = model.predict(X_test)  # Testing
     print("Accuracy:", accuracy_score(y_test, y_predicted))
@@ -71,12 +74,30 @@ def training_prediction(model=None):
     plt.show()
 
 
-""""""""""""""""""""""""
-"SUPPORT VECTOR MACHINE"
-""""""""""""""""""""""""
 if SVM_flag:
     print("\nSVM INITIALIZATION...")
 
+    model_SVC = SVC(kernel='rbf', C=626, gamma=0.002)  # C=626 gamma=0.002 --> best parameters found
+    k_fold_accuracy(n_splits=10, Xset=X, yset=y, model_to_evaluate=model_SVC)  # K-Fold cross-validation
+    training_prediction(model_SVC, X_train, y_train)  # Training + Prediction
+
+if LR_flag:
+    print("\nLR INITIALIZATION...")
+
+    model_LR = LogisticRegression()
+    k_fold_accuracy(n_splits=10, Xset=X, yset=y, model_to_evaluate=model_LR)  # K-Fold cross-validation
+    training_prediction(model_LR, X_train, y_train)  # Training + Prediction
+
+if KNN_flag:
+    print("\nKNN INITIALIZATION...")
+
+    model_KNN = KNeighborsClassifier(n_neighbors=13)
+    k_fold_accuracy(n_splits=10, Xset=X, yset=y, model_to_evaluate=model_KNN)  # K-Fold cross-validation
+    training_prediction(model_KNN, X_train, y_train)   # Training + Prediction
+
+
+"""
+# after first print... in SVM
     if test_flag:
         for c in range(1, 801, 5):
             for gamma in [0.0001, 0.0005, 0.001, 0.002,
@@ -87,22 +108,7 @@ if SVM_flag:
                 if np.mean(scores) > 0.854 and np.std(scores) < 0.07:
                     print('C={} gamma={}'.format(c, gamma))
                     print('Accuracy: %.3f (%.3f)' % (np.mean(scores), np.std(scores)))  # report performance
-
-    model_SVC = SVC(kernel='rbf', C=626, gamma=0.002)  # C=626 gamma=0.002
-    k_fold_accuracy(n_splits=10, Xset=X, yset=y, model_to_evaluate=model_SVC)   # K-Fold cross-validation
-    training_prediction(model_SVC)  # Training + Prediction
-
-"""""""""""""""""""""
-"LOGISTIC REGRESSION"
-"""""""""""""""""""""
-if LR_flag:
-    print("\nLR INITIALIZATION...")
-
-    model_LR = LogisticRegression()
-    k_fold_accuracy(n_splits=10, Xset=X, yset=y, model_to_evaluate=model_LR)    # K-Fold cross-validation
-    training_prediction(model_LR)   # Training + Prediction
-
-
+"""
 
 
 
