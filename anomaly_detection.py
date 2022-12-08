@@ -1,27 +1,21 @@
-# TODO
-#           isolation forest
-#           or Supervised Binary Classification:
-#                                       Logistic Regression
-#                                       k-Nearest Neighbors
-#                                       Decision Trees
-#                                       Support Vector Machine
-#                                       Naive Bayes
-#
-# How often retain the iForest?
-
+from sklearn.ensemble import IsolationForest
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.ensemble import IsolationForest
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV, KFold, cross_val_score
+
+
+""""""""""""""""""
+"ISOLATION FOREST"
+""""""""""""""""""
+# TODO anomaly detection must be performed for data of one single patient, not
 
 # IMPORT DATA FROM CSV FILE
 file = 'data.csv'
 df = pd.read_csv(file, delimiter=',')
-print("len before dropping missing records: {}".format(len(df)))
-# Dropping missing records
-df = df.dropna()
-print("len after dropping missing records: {}".format(len(df)))
+print("len() before dropping missing records: {}".format(len(df)))
+df = df.dropna()  # Dropping missing records
+print("len() after dropping missing records: {}".format(len(df)))
 
 print(df.sample(5))
 print(df.describe())
@@ -30,30 +24,20 @@ attributes_essential = ['Age', 'BMI', 'Gait_Speed', 'Grip_Strength', 'Muscle mas
 
 # PLOT PAIRWISE ATTRIBUTES
 palette = ['#ff7f0e', '#1f77b4']
-sns.pairplot(df, vars=attributes_extended, hue='Sarcopenia', palette=palette)
-# plt.title("Sarcopenia - using all attributes")
-plt.show()
 sns.pairplot(df, vars=attributes_essential, hue='Sarcopenia', palette=palette)
-# plt.title("Sarcopenia - using selected attributes")
 plt.show()
 
 TRAIN_SIZE = 0.8
-X = df.drop(columns=['Sarcopenia']).copy()
+# X = df.drop(columns=['Sarcopenia']).copy()
+X = df[attributes_essential]
 y = df['Sarcopenia']
 X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=TRAIN_SIZE)
 
-print('X_train.shape: {}'.format(X_train.shape)), print('y_train.shape: {}'.format(y_train.shape))
-print('X_test.shape: {}'.format(X_test.shape)), print('y_test.shape: {}'.format(y_test.shape))
-
-"""""""""""""""""""""
-"LOGISTIC REGRESSION"
-"""""""""""""""""""""
+print('X_train.shape: {}    X_test.shape: {}'.format(X_train.shape, X_test.shape))
+print('y_train.shape: {}    y_test.shape: {}'.format(y_train.shape, y_test.shape))
 
 
-""""""""""""""""""
-"ISOLATION FOREST"
-""""""""""""""""""
-# TODO anomaly detection must be performed for data of one single patient, not
+
 
 # contamination : how much of the overall data we expect to be considered as an outlier.
 #                 we can pass in a value between 0 and 0.5 or set it to auto.
@@ -74,7 +58,6 @@ X_test['anomaly_scores'] = model_IF.decision_function(X_test[attributes_essentia
 X_test['anomaly'] = model_IF.predict(X_test[attributes_essential])
 
 print(X_test.loc[:, ['ID', 'anomaly_scores', 'anomaly']])
-
 
 
 # PLOTTING OUTLIERS
@@ -102,6 +85,6 @@ def outlier_plot(data, outlier_method_name, x_var, y_var,
 
 
 outlier_plot(X_test, 'Isolation Forest', 'Age', 'Muscle mass',
-             [X_test['Age'].min()-1., X_test['Age'].max()+1],
-             [X_test['Muscle mass'].min()-1., X_test['Muscle mass'].max()+1])
+             [X_test['Age'].min() - 1., X_test['Age'].max() + 1],
+             [X_test['Muscle mass'].min() - 1., X_test['Muscle mass'].max() + 1])
 plt.show()
