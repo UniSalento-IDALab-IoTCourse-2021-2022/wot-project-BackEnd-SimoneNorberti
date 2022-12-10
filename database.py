@@ -1,6 +1,7 @@
 import sys
 import pymongo as pymongo
 import datetime
+
 # TODO inserire anche timestamp
 # TODO il giorno dell'esame ricordarsi che serve un IP autorizzato
 """
@@ -23,7 +24,7 @@ collection: misurazioni
 
 def connect_db(db):
     client = pymongo.MongoClient("mongodb+srv://snorb:K3Bjj4wD9VIzlg1E@clustersarcopenia0.gvzw6w6.mongodb.net/"
-                                     "?retryWrites=true&w=majority")
+                                 "?retryWrites=true&w=majority")
     db = client['' + db + '']
     return db
 
