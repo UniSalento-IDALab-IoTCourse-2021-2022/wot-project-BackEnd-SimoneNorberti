@@ -1,7 +1,7 @@
 from flask import Flask, request
 from mqtt_r import connect_mqtt, subscribe
-from database import connect_db, insert_one
-
+from database import db_connect, db_insert_one
+from machineLearning import train_send_model
 
 app = Flask(__name__)
 
@@ -11,36 +11,39 @@ def hello_world():  # put application's code here
     return 'Hello World!'
 
 
+# TODO inserire API per "Ferma allenamento" in modo da avviare l'algoritmo di ML
+
+
 @app.route('/senddata', methods=['GET', 'POST'])
 def data_receiver():
-
     """
-    # JSON FORMAT [START] ----------------------------------------------------------------------------------------
     paziente --> codice_fiscale
     misurazioni --> FM, FFM, acc_x, acc_y, acc_z, muscle_strenght
-    # JSON FORMAT [END] ----------------------------------------------------------------------------------------
     """
 
-    """
-    # DEBUG [START] : Insted of receive data from a POST request, use MQTT (jumping App-Android step) ------------
-    client = connect_mqtt()
-    subscribe(client)
-    client.loop_forever()
-    # DEBUG [END] ------------------------------------------------------------------------------------------------
-    """
-
-    # NORMAL BEHAVIOR [START] : DATA COLLECTION BY POST METHOD ----------------------------------------------------
+    # DATA COLLECTION BY POST METHOD
     data = request.get_json()
     print('Data received: {}'.format(data))
-    # NORMAL BEHAVIOR [END]: DATA COLLECTION BY POST METHOD --------------------------------------------------------
 
-    # SAVE DATA INTO DB [START] -----------------------------------------------------------------------------------
+    # SAVE DATA INTO DB
+    DB = 'SarcopeniaDB'
     MEASUREMENT = 'measurement'
-    insert_one(MEASUREMENT, data)
-    # SAVE DATA INTO DB [END] -----------------------------------------------------------------------------------
+    db_insert_one(db_connect(DB), MEASUREMENT, data)
+
     return '{ "success": 1 }'
+
+
+@app.route('/receivemodel', methods=['GET'])
+def send_model():
+    return train_send_model()
 
 
 if __name__ == '__main__':
     app.run()
 
+"""
+# DEBUG [START] : Insted of receive data from a POST request, use MQTT (jumping App-Android step) 
+client = connect_mqtt()
+subscribe(client)
+client.loop_forever()
+"""

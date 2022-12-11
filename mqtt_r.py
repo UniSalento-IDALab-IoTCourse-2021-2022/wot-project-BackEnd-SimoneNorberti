@@ -1,5 +1,5 @@
 from paho.mqtt import client as mqtt_client
-from database import connect_db, insert_one
+from database import db_connect, db_insert_one
 import json
 
 broker = 'mqtt.eclipseprojects.io'
@@ -29,7 +29,7 @@ def connect_mqtt():
 def subscribe(client: mqtt_client):
     def on_message(client, userdata, msg):
         print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
-        insert_one('measurement', json.loads(msg.payload.decode()))
+        db_insert_one('measurement', json.loads(msg.payload.decode()))
 
     client.subscribe(topic_bia)
     client.on_message = on_message

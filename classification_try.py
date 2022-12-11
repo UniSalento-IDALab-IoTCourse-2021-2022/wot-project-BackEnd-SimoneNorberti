@@ -1,4 +1,3 @@
-
 # How often retrain the classificators?
 
 import numpy as np
@@ -13,6 +12,8 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.tree import DecisionTreeClassifier
 
+from sklearn2pmml import PMMLPipeline, sklearn2pmml
+
 # IMPORT DATA FROM CSV FILE
 file = 'data.csv'
 df = pd.read_csv(file, delimiter=',')
@@ -23,7 +24,8 @@ print("len() after dropping missing records: {}".format(len(df)))
 print(df.sample(5))
 print(df.describe())
 attributes_extended = ['Sex', 'Age', 'BMI', 'Risk & Malnutrition', 'Gait_Speed', 'Grip_Strength', 'Muscle mass']
-attributes_essential = ['Age', 'BMI', 'Gait_Speed', 'Grip_Strength', 'Muscle mass']
+# attributes_essential = ['Age', 'BMI', 'Gait_Speed', 'Grip_Strength', 'Muscle mass']
+attributes_essential = ['Gait_Speed', 'Grip_Strength', 'Muscle mass']
 
 # PLOT PAIRWISE ATTRIBUTES
 palette = ['#ff7f0e', '#1f77b4']
@@ -31,7 +33,6 @@ sns.pairplot(df, vars=attributes_essential, hue='Sarcopenia', palette=palette)
 plt.show()
 
 TRAIN_SIZE = 0.8
-# X = df.drop(columns=['Sarcopenia']).copy()
 X = df[attributes_essential]
 y = df['Sarcopenia']
 X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=TRAIN_SIZE)
@@ -44,6 +45,7 @@ LR_flag = True  # Logistic Regression
 KNN_flag = True  # K-Nearest Neighbor
 GaussinNB_flag = True  # Gaussian Naive Bayes
 DecisionTree_flag = True
+ensemble_try = True
 test_flag = False  # True if u want evaluation stuff
 
 
@@ -75,6 +77,12 @@ if SVM_flag:
 
     model_SVC = SVC(kernel='rbf', C=626, gamma=0.002)  # C=626 gamma=0.002 --> best parameters found
     k_fold_accuracy(n_splits=10, Xset=X, yset=y, model_to_evaluate=model_SVC)  # K-Fold cross-validation
+
+    # TODO model for Andorid App Java
+    # pipeline = PMMLPipeline([("SVM Classifier", SVC(kernel='rbf', C=626, gamma=0.002) )])
+    # training_prediction(pipeline, X_train, y_train)
+    # sklearn2pmml(pipeline, "model_SVC.pmml", with_repr=True)
+
     training_prediction(model_SVC, X_train, y_train)  # Training + Prediction
 
 if LR_flag:
@@ -108,45 +116,52 @@ if DecisionTree_flag:
 '''
 ENSEMBLE TRY
 '''
+if ensemble_try:
+    pred = []
 
-pred = []
+    pred.append(model_SVC.predict(X_test))
+    pred.append(model_LR.predict(X_test))
+    pred.append(model_KNN.predict(X_test))
+    pred.append(model_GNB.predict(X_test))
+    pred.append(model_DTC.predict(X_test))
+    print("SVC={} \nLR={} \nKNN={} \nGNB={} \nDTC={}".format(pred[0], pred[1], pred[2], pred[3], pred[4]))
 
-pred.append(model_SVC.predict(X_test))
-pred.append(model_LR.predict(X_test))
-pred.append(model_KNN.predict(X_test))
-pred.append(model_GNB.predict(X_test))
-pred.append(model_DTC.predict(X_test))
-print("SVC={} \nLR={} \nKNN={} \nGNB={} \nDTC={}".format(pred[0], pred[1], pred[2], pred[3], pred[4]))
+    print("-.-.-.-.-.-")
+    print(model_SVC)
+    print(model_SVC.support_)
+    print("-.-.-.-.-.-")
 
-'''
-MAJORITY VOTING
-'''
-m = None  # winner
-len_pred = len(pred[0])
-n_classifier = 5
-print(len_pred)
-final = []
+    '''
+    MAJORITY VOTING
+    '''
+    m = None  # winner
+    len_pred = len(pred[0])
+    n_classifier = 5
+    print(len_pred)
+    final = []
 
-for j in range(len_pred):
-    score = 0
-    for i in [0, 1, 2, 3, 4]:  # range(n_classifier)
-        print("i,j = {},{}".format(i, j))
-        if i == 0:
-            m = pred[i][j]
-            print('m = ', m)
-            score = 1
-        elif pred[i][j] == m:
-            score += 1
-        else:
-            if score == 0:
+    for j in range(len_pred):
+        score = 0
+        for i in [0, 1, 2, 3, 4]:  # range(n_classifier)
+            # print("i,j = {},{}".format(i, j))
+            if i == 0:
                 m = pred[i][j]
-                continue
-            score -= 1
-    final.append(m)
-    print(final[j])
+                # print('m = ', m)
+                score = 1
+            elif pred[i][j] == m:
+                score += 1
+            else:
+                if score == 0:
+                    m = pred[i][j]
+                    continue
+                score -= 1
+        final.append(m)
+        # print(final[j])
 
-print("Ensamble Accuracy:", accuracy_score(y_test, final))
-# TODO complete the esamble learning
+    print("Ensamble Accuracy:", accuracy_score(y_test, final))
+    # TODO complete the esamble learning --> risultato dopo vary Xtest
+
+
 """
 Initialize an element m and a counter i with i = 0
 For each element x of the input sequence:

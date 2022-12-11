@@ -22,28 +22,22 @@ collection: misurazioni
 """
 
 
-def connect_db(db):
+def db_connect(db):
     client = pymongo.MongoClient("mongodb+srv://snorb:K3Bjj4wD9VIzlg1E@clustersarcopenia0.gvzw6w6.mongodb.net/"
                                  "?retryWrites=true&w=majority")
     db = client['' + db + '']
     return db
 
 
-def insert_one(collection, data):
-    # Try to connect to DB
-    try:
-        db = connect_db('SarcopeniaDB')
-    except:
-        print("[ERROR] Connection to DB failed!, INFO:", sys.exc_info()[0])
-        return
-    print("[OK] Connection to DB successful!")
-
+def db_insert_one(db, collection, data):
+    # print("[ERROR] Connection to DB failed!, INFO:", sys.exc_info()[0])
+    # print("[OK] Connection to DB successful!")
     collection = db['' + collection + '']
-    # Try to do an "insert_one" operation
+
     try:
-        prova = collection.insert_one(data).inserted_id
+        id_insert = collection.insert_one(data).inserted_id
     except:
-        print("[ERROR] insert_one, INFO:", sys.exc_info()[0])
+        print("[DB ERROR] insert_one, INFO:", sys.exc_info()[0])
         return
-    print("[OK] insert_one - id: {}".format(prova))
+    print("[DB OK] insert_one - id: {}".format(id_insert))
     return
