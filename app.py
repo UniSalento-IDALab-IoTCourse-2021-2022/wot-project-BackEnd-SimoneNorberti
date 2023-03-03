@@ -1,7 +1,9 @@
+import pandas as pd
 from flask import Flask, request
-from mqtt_r import connect_mqtt, subscribe
-from database import db_connect, db_insert_one
-from machineLearning import train_send_model
+
+import database
+import json
+from sklearn.ensemble import IsolationForest
 
 app = Flask(__name__)
 
@@ -17,25 +19,72 @@ def hello_world():  # put application's code here
 @app.route('/senddata', methods=['GET', 'POST'])
 def data_receiver():
     """
-    paziente --> codice_fiscale
-    misurazioni --> FM, FFM, acc_x, acc_y, acc_z, muscle_strenght
+    paziente --> codice_fiscale (o ID)
+    misurazioni --> (no) FM, FFM, acc_x, acc_y, acc_z, muscle_strenght
+                --> (si) GAIT_SPEED, GRIP_STRENGHT, MUSCLE_MASS
     """
 
-    # DATA COLLECTION BY POST METHOD
-    data = request.get_json()
+    # DATA RECEIVED BY POST
+    data = request.get_json()   # json_
     print('Data received: {}'.format(data))
+    json_dict = json.dumps(data)
+    # data = json.loads(json_dict)
 
-    # SAVE DATA INTO DB
+    # print(type(json_data))
+    # print(type(json_dict))
+    print(type(data))
+
     DB = 'SarcopeniaDB'
     MEASUREMENT = 'measurement'
-    db_insert_one(db_connect(DB), MEASUREMENT, data)
+    ID = data["ID"]
+    GAIT_SPEED = data["GAIT_SPEED"]
+    GRIP_STRENGHT = data["GRIP_STRENGHT"]
+    MUSCLE_MASS = data["MUSCLE_MASS"]
+    X = [GAIT_SPEED, GRIP_STRENGHT, MUSCLE_MASS]
+
+    # 1: fare anomaly detection - controllo inizizzazione nuovo utente
+    model = database.db_get_model(DB, ID)
+    if model is None:
+        if database.db_count(DB, MEASUREMENT, ID) > 10:
+            dataset = database.db_get_all(DB, MEASUREMENT, ID)
+            print(dataset)
+            new_model = IsolationForest(random_state=0)
+            new_model.fit(dataset)
+            database.db_insert_model(DB, new_model, ID)
+            database.db_insert_one(DB, MEASUREMENT, data)
+            return '{ "success": 2 }'
+        else:
+            database.db_insert_one(DB, MEASUREMENT, data)
+            return '{ "success": 3 }'
+
+    # 2: inserire nuovo dato nel DB
+    database.db_insert_one(DB, MEASUREMENT, data)
+
+    # 3: fare l'anomaly detection
+    data_to_predict = pd.DataFrame.from_dict({
+        'GAIT_SPEED': data["GAIT_SPEED"],
+        'GRIP_STRENGHT': data["GRIP_STRENGHT"],
+        'MUSCLE_MASS': data["MUSCLE_MASS"]
+    }, orient="index").T
+    print(data_to_predict)
+    pred = model.predict(data_to_predict)
+    if pred == 1:
+        print("Anomalia Rilevata - model.predict(data): {}".format(pred))
+        # TODO AVVISARE IL MEDICO
+    elif pred == -1:
+        print("No anomalia - model.predict(data): {}".format(pred))
+
+
+    # 4: eliminare il vecchio modello
+    database.db_delete_model(DB, ID)
+
+    # 5: train new model
+    dataset = database.db_get_all(DB, MEASUREMENT, ID)
+    new_model = IsolationForest(random_state=0)
+    new_model.fit(dataset)
+    database.db_insert_model(DB, new_model, ID)
 
     return '{ "success": 1 }'
-
-
-@app.route('/receivemodel', methods=['GET'])
-def send_model():
-    return train_send_model()
 
 
 if __name__ == '__main__':
