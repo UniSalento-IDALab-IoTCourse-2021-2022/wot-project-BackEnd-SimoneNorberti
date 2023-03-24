@@ -15,6 +15,32 @@ def db_connect(db):
     return db
 '''
 
+'''
+def db_update_one(db, collection, ID, count):
+    client = pymongo.MongoClient("mongodb+srv://snorb:7OGFhqrLw8rTfCaL@clustersarcopenia0.gvzw6w6.mongodb.net/"
+                                 "?retryWrites=true&w=majority")
+    db = client['' + db + '']
+    collection = db['' + collection + '']
+    filter_query = {'ID': ID}
+    update_query = {'$set': {'count': count}}
+    return collection.update_one(filter_query, update_query)
+'''
+
+
+def db_delete_all(db, collection, ID):
+    print("         --> chiamata la funzione db_delete_all()")
+    client = pymongo.MongoClient("mongodb+srv://snorb:7OGFhqrLw8rTfCaL@clustersarcopenia0.gvzw6w6.mongodb.net/"
+                                 "?retryWrites=true&w=majority")
+    db = client['' + db + '']
+    collection = db['' + collection + '']
+
+    # Eliminazione di tutti i documenti nella collection
+    query = {"ID": ID}
+    result = collection.delete_many(query)
+
+    # Restituzione del numero di documenti eliminati
+    return result.deleted_count
+
 
 def db_insert_one(db, collection, data):
     client = pymongo.MongoClient("mongodb+srv://snorb:7OGFhqrLw8rTfCaL@clustersarcopenia0.gvzw6w6.mongodb.net/"
@@ -79,9 +105,9 @@ def db_get_all(db, collection, ID):
     # Query per recuperare tutte le occorrenze con un attributo specifico
     query = {"ID": ID}
     results = collection.find(query)
-    # print('db_get_all(): results:{}'.format(results))
     df = pd.DataFrame(list(results))
     # print('db_get_all(): df:{}'.format(df))
+    # print('db_get_all(): df.iloc[:,[1, 2, 3]]:{}'.format(df.iloc[:, [1, 2, 3]]))
     return df.iloc[:, [1, 2, 3]]
 
 
