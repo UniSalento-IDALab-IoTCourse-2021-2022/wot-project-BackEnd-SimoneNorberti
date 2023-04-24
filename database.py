@@ -108,7 +108,33 @@ def db_get_all(db, collection, ID):
     df = pd.DataFrame(list(results))
     # print('db_get_all(): df:{}'.format(df))
     # print('db_get_all(): df.iloc[:,[1, 2, 3]]:{}'.format(df.iloc[:, [1, 2, 3]]))
+    return df.iloc[:, [1, 2, 3]]    # prende solo i valori per l'anomaly detection (es. non prende il timestamp)
+
+
+def db_get_all_to_predict(db, collection, ID):
+    client = pymongo.MongoClient("mongodb+srv://snorb:7OGFhqrLw8rTfCaL@clustersarcopenia0.gvzw6w6.mongodb.net/"
+                                 "?retryWrites=true&w=majority")
+    db = client['' + db + '']
+    collection = db['' + collection + '']
+    # Query per recuperare tutte le occorrenze con un attributo specifico
+    query = {"ID": ID, "ANOMALY": -1}
+    results = collection.find(query)
+    df = pd.DataFrame(list(results))
+    # print('db_get_all_to_predict(): df:{}'.format(df))
+    # print('db_get_all_to_predict(): df.iloc[:,[1, 2, 3]]:{}'.format(df.iloc[:, [1, 2, 3]]))
     return df.iloc[:, [1, 2, 3]]
+
+
+def db_reset_anomaly(db, collection, ID):
+    client = pymongo.MongoClient("mongodb+srv://snorb:7OGFhqrLw8rTfCaL@clustersarcopenia0.gvzw6w6.mongodb.net/"
+                                 "?retryWrites=true&w=majority")
+    db = client['' + db + '']
+    collection = db['' + collection + '']
+
+    query = {"ANOMALY": -1}
+    new = {"$set": {"ANOMALY": 0}}
+    results = collection.update_many(query, new)
+    # print("db_reset_anomaly results:", results)
 
 
 def db_count(db, collection, ID):

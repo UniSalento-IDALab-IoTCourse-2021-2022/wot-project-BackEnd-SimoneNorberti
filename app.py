@@ -1,12 +1,16 @@
 import pandas as pd
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import uuid
 import database
 import json
 import time
+import smtpfile
+import pymongo
 from sklearn.ensemble import IsolationForest
 
 app = Flask(__name__)
+CORS(app)
 
 
 def majority_vote(arr):
@@ -35,6 +39,40 @@ def majority_vote(arr):
     return max_el
 
 
+@app.route('/api/listapazienti')
+def get_pazienti():
+    objects = [
+        {'ID': 'ID001', 'nome': 'Mario', 'cognome': 'Rossi'},
+        {'ID': 'ID002', 'nome': 'Giuseppe', 'cognome': 'Verdi'},
+        {'ID': 'ID003', 'nome': 'Francesco', 'cognome': 'Bianchi'}
+    ]
+    return jsonify(objects)
+
+
+@app.route('/api/pazienti/<string:object_id>')
+def get_data(object_id):
+    print("ObjectID: " + object_id)
+    # Configura la connessione al database MongoDB
+    client = pymongo.MongoClient("mongodb+srv://snorb:7OGFhqrLw8rTfCaL@clustersarcopenia0.gvzw6w6.mongodb.net/"
+                                 "?retryWrites=true&w=majority")
+    db = client["SarcopeniaDB"]
+    collection = db["measurement"]
+
+    # Crea la query
+    query = {"ID": object_id}
+
+    # Esegue la query e ottiene i risultati
+    results = collection.find(query)
+
+    data = []
+    for result in results:
+        result['_id'] = str(result['_id'])
+        data.append(result)
+    print(data)
+
+    return jsonify(data)
+
+
 @app.route('/')
 def hello_world():
     return 'Sarcopenia Project - Norberti Simone [IoT]'
@@ -43,86 +81,74 @@ def hello_world():
 @app.route('/api/endsession', methods=['POST'])
 def end_session():
     """
-    paziente --> codice fiscale (o ID)
+        INPUT: ID
     """
 
     end_data = request.get_json()
-    print('Data received: {}'.format(end_data))
+    print('/api/endsession  ID:', end_data)
 
     DB = 'SarcopeniaDB'
     MEASUREMENT = 'measurement'
-    MEASUREMENT_TEMP = 'measurement_temp'
     ID = end_data["ID"]
 
     # -------------    ANTI-DOUBLE REQUEST     -------------
-    if database.db_count(DB, MEASUREMENT_TEMP, ID) == 0:
-        print("---------------ANTI DOPPIA RICHIESTA---------------")
-        time.sleep(5)
+    try:
+        database.db_get_all_to_predict(DB, MEASUREMENT, ID)
+    except:
         return '{ "ML success": -1 }'
-    # ------------------------------------------------------
+
 
     # 0: controllo se esiste il modello
     model = database.db_get_model(DB, ID)
     if model is None:
-        #TODO sostituire MEASUREMENT_TEMP con anomaly -1,0,1
-        database.db_delete_all(DB, MEASUREMENT_TEMP, ID)
-        print("[MODEL NOT FOUND] - Controllo numero di misurazioni...")
+        print("Model not found: Check the number of measurements in db...")
+
         # 1: se il modello esiste e vi sono abbastanza misure, fare ANOMALY DETECTION
-        if database.db_count(DB, MEASUREMENT, ID) >= 30:
-            print("[MODEL NOT FOUND] -  Creazione modello in corso...")
+        if database.db_count(DB, MEASUREMENT, ID) >= 30:  # se misurazioni <30 il modello non viene creato
+            print("Model not found: Training new model...")
 
             dataset = database.db_get_all(DB, MEASUREMENT, ID)
-
             new_model = IsolationForest(contamination=0.1)  # random_state=0, contamination=0.01
-            new_model.fit(dataset)
+            new_model.fit(dataset)  # Train the model
             database.db_insert_model(DB, new_model, ID)
-            print("[MODEL CREATED]")
-            # database.db_delete_all(DB, MEASUREMENT_TEMP, ID)
+            database.db_reset_anomaly(DB, MEASUREMENT, ID)
+            print("Model not found: Model trained!")
 
-        return '{ "ML success": 0 }'  # ritorna, no anomaly detection
+            return '{ "ML success": 2 }'  # model trained, no anomaly detection
+        print("Not enaught measurements to fit the model")
+        return '{ "ML success": 1 }'  # model not trained, no anomaly detection
 
     # 2: il modello esiste, facciamo ANOMALY DETECTION
-    data_to_predict = database.db_get_all(DB, MEASUREMENT_TEMP, ID)
-
-    print("\nMisurazioni della sessione: {}".format(data_to_predict))
-    # print(data_to_predict)
-
-    pred = model.predict(data_to_predict)
-    #TODO Aggiungere attributo "ANOMALY"
-
-    # print("\nLe predizioni sono: {}".format(pred))
+    data_to_predict = database.db_get_all_to_predict(DB, MEASUREMENT, ID)  # anomaly = -1 (to check)
+    database.db_reset_anomaly(DB, MEASUREMENT, ID)
+    print("\nSession's measurements:\n", data_to_predict)
+    pred = model.predict(data_to_predict)  # Prediction
+    print("\nPredictions:", pred)
 
     # 3: Majority voting per rilevare anomalia
     print("\nMajority voting...")
     majority_result = majority_vote(pred)
     if majority_result == -1:
-        print("Anomalia Rilevata - Prediction per ogni misurazione: {}".format(pred))
-        # TODO AVVISARE IL MEDICO
+        print("Anomaly detected!!!")
+        # TODO prendere email medico + altre info paziente dal DB
+        smtpfile.send_email(ID)
     elif majority_result == 1:
-        print("No anomalia - Prediction per ogni misurazione: {}".format(pred))
+        print("No anomaly")
     else:
-        print("[ERROR] - Majority voting error!!!")
+        print("[Error] Majority voting error")
 
-    # 3: ELIMINARE vecchio modello, ALLENARE nuovo modello
-    print("\n[RE-TRAIN MODEL] - Start!")
-    database.db_delete_all(DB, MEASUREMENT_TEMP, ID)
+    # 3: ELIMINARE vecchio modello, ANOMALY = 0, ALLENARE nuovo modello
+    print("\nRe-training the model with the new measurements...")
     database.db_delete_model(DB, ID)
     dataset = database.db_get_all(DB, MEASUREMENT, ID)
-    '''
-    dataset = pd.DataFrame.from_dict({
-        'GAIT_SPEED': dataset["GAIT_SPEED"],
-        'GRIP_STRENGHT': dataset["GRIP_STRENGHT"],
-        'MUSCLE_MASS': dataset["MUSCLE_MASS"]
-    }, orient="index").T
-    '''
-    print("Dimensioni di tutte le misurazioni: {}".format(dataset.shape))
-    # print(dataset.shape)
+    print("Total measurement:", dataset.shape, "(#meas, #attr)")
+
     new_model = IsolationForest(contamination=0.1)  # random_state=0, contamination=0.01
     new_model.fit(dataset)
     database.db_insert_model(DB, new_model, ID)
-    print("[RE-TRAIN MODEL] - End!")
+    print("Re-train end.")
 
-    return '{ "ML success": 1 }'
+    return '{ "ML success": 0 }'
 
 
 @app.route('/api/senddata', methods=['GET', 'POST'])
@@ -135,23 +161,17 @@ def data_receiver():
 
     ''' DATA RECEIVED BY REST POST '''
     data = request.get_json()
-    data['Anomaly'] = -1    # Not checked
+    data['ANOMALY'] = -1  # Not checked
     print('Data received: {}'.format(data))
 
     DB = 'SarcopeniaDB'
     MEASUREMENT = 'measurement'
     MEASUREMENT_TEMP = 'measurement_temp'
-    # ID = data["ID"]
-    # GAIT_SPEED = data["GAIT_SPEED"]
-    # GRIP_STRENGHT = data["GRIP_STRENGHT"]
-    # MUSCLE_MASS = data["MUSCLE_MASS"]
-    # X = [GAIT_SPEED, GRIP_STRENGHT, MUSCLE_MASS]
 
     ''' inserire nuovo dato nel DB '''
     database.db_insert_one(DB, MEASUREMENT, data)
-    #database.db_insert_one(DB, MEASUREMENT_TEMP, data)
 
-    return '{ "data success": 1 }'
+    return '{ "data success": 0 }'
 
 
 if __name__ == '__main__':
