@@ -1,3 +1,4 @@
+#!/usr/bin/python3.7
 import pandas as pd
 from flask import Flask, request, jsonify
 from flask_cors import CORS
