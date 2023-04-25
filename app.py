@@ -9,6 +9,8 @@ import time
 import smtpfile
 import pymongo
 from sklearn.ensemble import IsolationForest
+import sys
+print("Python version", sys.version)
 
 app = Flask(__name__)
 CORS(app)
