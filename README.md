@@ -21,22 +21,26 @@ chmod 400 ./ssh-key-2023-04-24.key
 ssh -i ssh-key-2023-04-24.key opc@152.70.169.171
 ```
 
-Utilizziamo git per scaricare il codice Python sul server:
+Utilizzare git per scaricare il codice Python sul server:
 ```
 git clone https://github.com/UniSalento-IDALab-IoTCourse-2021-2022/wot-project-BackEnd-SimoneNorberti
 ```
 
-Tramite il comando firewall-cmd apriamo la porta TCP 5000
+Tramite il comando firewall-cmd aprire la porta TCP 5000
 ```
 sudo firewall-cmd --zone=public --add-port=5000/tcp
 sudo firewall-cmd --runtime-to-permanent
 sudo firewall-cmd –-reload
 ```
 
-Installiamo l'interprete Python (versione 3.7 o superiore):
+Installare l'interprete Python (versione 3.7 o superiore):
 ```
 sudo yum install python3
 sudo pip3 install pandas, flask, flask_cors, pymongo, scikit-learn
+```
+
+Avviare il servizio Back-End:
+```
 cd wot-project-BackEnd-SimoneNorberti
 pyhton3.7 app.py
 ```
