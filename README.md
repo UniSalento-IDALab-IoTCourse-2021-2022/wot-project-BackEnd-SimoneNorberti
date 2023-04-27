@@ -37,6 +37,7 @@ Installiamo l'interprete Python (versione 3.7 o superiore):
 ```
 sudo yum install python3
 sudo pip3 install pandas, flask, flask_cors, pymongo, scikit-learn
+cd wot-project-BackEnd-SimoneNorberti
 pyhton3.7 app.py
 ```
 
