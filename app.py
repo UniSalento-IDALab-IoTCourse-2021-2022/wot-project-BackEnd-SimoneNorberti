@@ -44,6 +44,7 @@ def majority_vote(arr):
 
 @app.route('/api/listapazienti')
 def get_pazienti():
+    # TODO ricevere lista pazienti con query MongoDB
     objects = [
         {'ID': 'ID001', 'nome': 'Mario', 'cognome': 'Rossi'},
         {'ID': 'ID002', 'nome': 'Giuseppe', 'cognome': 'Verdi'},
